@@ -18,7 +18,7 @@ def generate_benchmark_heatmap(pivot_table, output_path):
 
 if __name__ == "__main__":
 
- df = pd.read_csv("SmallCompany.csv")
+ df = pd.read_csv("Charts/SmallCompany.csv")
 
 df_dept_cat = duckdb.query("""
         WITH dept_totals AS (
