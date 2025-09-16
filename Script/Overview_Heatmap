@@ -32,15 +32,22 @@ df_dept_cat = duckdb.query("""
             FROM df
             GROUP BY department, category
         )
+all_pairs AS (
+        SELECT DISTINCT d.department, c.category
+        FROM (SELECT DISTINCT department FROM df) d
+        CROSS JOIN (SELECT DISTINCT category FROM df) c
+    )
+    SELECT
+        ap.department,
+        ap.category,
+        ROUND(100.0 * COALESCE(cs.category_total, 0) / dt.dept_total, 2) AS percent_of_dept_spend
+    FROM all_pairs ap
+    JOIN dept_totals dt ON ap.department = dt.department
+    LEFT JOIN category_spend cs 
+        ON ap.department = cs.department 
+       AND ap.category = cs.category
+""").df()
 
-        SELECT
-            cs.department,
-            cs.category,
-            ROUND(100.0 * cs.category_total / dt.dept_total, 2) AS percent_of_dept_spend
-        FROM category_spend cs
-        JOIN dept_totals dt
-        ON cs.department = dt.department
-    """).df() 
 
 category_avg = df_dept_cat.groupby('category')['percent_of_dept_spend'].mean().round(2)
 df_dept_cat['deviation_from_avg'] = df_dept_cat['percent_of_dept_spend'] - df_dept_cat['category'].map(category_avg)
