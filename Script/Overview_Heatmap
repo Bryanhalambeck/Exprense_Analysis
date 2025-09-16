@@ -97,7 +97,7 @@ comparison = []
 for dept in pivot_dev.index:
         for cat in pivot_dev.columns:
             actual_dev = pivot_dev.loc[dept, cat]
-            tier = expected_tiers.get((dept, cat), 'Medium')
+            tier = expected_tiers.get((dept, cat)
             benchmark = {
                 'Low': g1_mid,
                 'Medium–Low': g2_mid,
