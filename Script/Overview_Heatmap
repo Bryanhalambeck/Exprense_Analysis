@@ -49,25 +49,6 @@ all_pairs AS (
 """).df()
 
 
-category_avg = df_dept_cat.groupby('category')['percent_of_dept_spend'].mean().round(2)
-df_dept_cat['deviation_from_avg'] = df_dept_cat['percent_of_dept_spend'] - df_dept_cat['category'].map(category_avg)
-
-pivot_dev = df_dept_cat.pivot(index='department', columns='category', values='deviation_from_avg').fillna(0)
-
-deviation_values = pivot_dev.values.flatten()
-sorted_dev = np.sort(deviation_values[~np.isnan(deviation_values)])
-
-q20 = np.percentile(sorted_dev, 20)
-q40 = np.percentile(sorted_dev, 40)
-q60 = np.percentile(sorted_dev, 60)
-q80 = np.percentile(sorted_dev, 80)
-
-g1_mid = np.mean(sorted_dev[sorted_dev <= q20])
-g2_mid = np.mean(sorted_dev[(sorted_dev > q20) & (sorted_dev <= q40)])
-g3_mid = np.mean(sorted_dev[(sorted_dev > q40) & (sorted_dev <= q60)])
-g4_mid = np.mean(sorted_dev[(sorted_dev > q60) & (sorted_dev <= q80)])
-g5_mid = np.mean(sorted_dev[sorted_dev > q80])
-
 expected_tiers = {
         ('Engineering', 'Meals'): 'Low',
         ('Engineering', 'Office Supplies'): 'Medium–Low',
@@ -97,24 +78,44 @@ expected_tiers = {
         ('IT', 'Office Supplies'): 'Medium',
         ('IT', 'Software'): 'High',
         ('IT', 'Training'): 'High',
-        ('IT', 'Travel'): 'Low',
-    }
+        ('IT', 'Travel'): 'High', 
 
-comparison = []
-for dept in pivot_dev.index:
-        for cat in pivot_dev.columns:
-            actual_dev = pivot_dev.loc[dept, cat]
-            tier = expected_tiers.get(dept, cat)
-            benchmark = {
-                'Low': g1_mid,
-                'Medium–Low': g2_mid,
-                'Medium': g3_mid,
-                'Medium–High': g4_mid,
-                'High': g5_mid,
-            }[tier]
-            comparison.append((dept, cat, round(actual_dev - benchmark, 2)))
 
-df_comp = pd.DataFrame(comparison, columns=['department', 'category', 'dev_from_expected'])
-pivot_expected = df_comp.pivot(index='department', columns='category', values='dev_from_expected')
+# --- Map expected tiers to numeric values, compute deviation, and plot one heatmap ---
 
-generate_benchmark_heatmap(pivot_expected, "charts/benchmark_heatmap.png") 
+# Tier % mapping
+tier_midpoints = {
+    "Low": 10,
+    "Medium–Low": 30,
+    "Medium": 50,
+    "Medium–High": 70,
+    "High": 90,
+}
+
+# Attach expected tier + midpoint
+df_dept_cat["expected_tier"] = df_dept_cat.apply(
+    lambda r: expected_tiers.get((r["department"], r["category"])),
+    axis=1
+)
+df_dept_cat["expected_midpoint"] = df_dept_cat["expected_tier"].map(tier_midpoints)
+
+# Validate (optional but helpful)
+missing = df_dept_cat[df_dept_cat["expected_midpoint"].isna()][["department","category"]].drop_duplicates()
+if not missing.empty:
+    raise ValueError(f"Missing from expected_tiers: {missing.values.tolist()}")
+
+# Deviation = Actual % - Expected %
+df_dept_cat["deviation"] = df_dept_cat["percent_of_dept_spend"] - df_dept_cat["expected_midpoint"]
+
+# Pivot to Department x Category
+pivot_dev = (
+    df_dept_cat
+    .pivot(index="department", columns="category", values="deviation")
+    .fillna(0.0)
+    .sort_index()
+)
+
+# One heatmap: deviation only (centered at 0)
+generate_benchmark_heatmap(pivot_dev, "Charts/Deviation_Heatmap.png")
+
+
