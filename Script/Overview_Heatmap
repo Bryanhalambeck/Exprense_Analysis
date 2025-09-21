@@ -85,9 +85,7 @@ expected_tiers = {
         ('IT', 'Travel'): 'High', 
 }
 
-# --- Map expected tiers to numeric values, compute deviation, and plot one heatmap ---
 
-# Tier % mapping
 tier_midpoints = {
     "Low": 10,
     "Medium–Low": 30,
