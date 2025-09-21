@@ -16,23 +16,26 @@ def generate_benchmark_heatmap(pivot_table, output_path):
     plt.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.show()
 
-if __name__ == "__main__":
 
- df = pd.read_csv("Charts/SmallCompany.csv")
+
+df = pd.read_csv("SmallCompany.csv")
+
+# Register the pandas DataFrame for DuckDB SQL
+duckdb.register("df", df)
 
 df_dept_cat = duckdb.query("""
-        WITH dept_totals AS (
-            SELECT department, SUM(amount) AS dept_total
-            FROM df
-            GROUP BY department
-        ),
-
-        category_spend AS (
-            SELECT department, category, SUM(amount) AS category_total
-            FROM df
-            GROUP BY department, category
-        )
-all_pairs AS (
+    WITH
+    dept_totals AS (
+        SELECT department, SUM(amount) AS dept_total
+        FROM df
+        GROUP BY department
+    ),
+    category_spend AS (
+        SELECT department, category, SUM(amount) AS category_total
+        FROM df
+        GROUP BY department, category
+    ),
+    all_pairs AS (
         SELECT DISTINCT d.department, c.category
         FROM (SELECT DISTINCT department FROM df) d
         CROSS JOIN (SELECT DISTINCT category FROM df) c
@@ -43,9 +46,10 @@ all_pairs AS (
         ROUND(100.0 * COALESCE(cs.category_total, 0) / dt.dept_total, 2) AS percent_of_dept_spend
     FROM all_pairs ap
     JOIN dept_totals dt ON ap.department = dt.department
-    LEFT JOIN category_spend cs 
-        ON ap.department = cs.department 
+    LEFT JOIN category_spend cs
+        ON ap.department = cs.department
        AND ap.category = cs.category
+    ORDER BY ap.department, ap.category
 """).df()
 
 
@@ -79,7 +83,7 @@ expected_tiers = {
         ('IT', 'Software'): 'High',
         ('IT', 'Training'): 'High',
         ('IT', 'Travel'): 'High', 
-
+}
 
 # --- Map expected tiers to numeric values, compute deviation, and plot one heatmap ---
 
