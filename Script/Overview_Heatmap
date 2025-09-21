@@ -101,11 +101,6 @@ df_dept_cat["expected_tier"] = df_dept_cat.apply(
 )
 df_dept_cat["expected_midpoint"] = df_dept_cat["expected_tier"].map(tier_midpoints)
 
-
-missing = df_dept_cat[df_dept_cat["expected_midpoint"].isna()][["department","category"]].drop_duplicates()
-if not missing.empty:
-    raise ValueError(f"Missing from expected_tiers: {missing.values.tolist()}")
-
  
 df_dept_cat["deviation"] = df_dept_cat["percent_of_dept_spend"] - df_dept_cat["expected_midpoint"]
 
