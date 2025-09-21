@@ -94,22 +94,22 @@ tier_midpoints = {
     "High": 90,
 }
 
-# Attach expected tier + midpoint
+
 df_dept_cat["expected_tier"] = df_dept_cat.apply(
     lambda r: expected_tiers.get((r["department"], r["category"])),
     axis=1
 )
 df_dept_cat["expected_midpoint"] = df_dept_cat["expected_tier"].map(tier_midpoints)
 
-# Validate (optional but helpful)
+
 missing = df_dept_cat[df_dept_cat["expected_midpoint"].isna()][["department","category"]].drop_duplicates()
 if not missing.empty:
     raise ValueError(f"Missing from expected_tiers: {missing.values.tolist()}")
 
-# Deviation = Actual % - Expected %
+ 
 df_dept_cat["deviation"] = df_dept_cat["percent_of_dept_spend"] - df_dept_cat["expected_midpoint"]
 
-# Pivot to Department x Category
+
 pivot_dev = (
     df_dept_cat
     .pivot(index="department", columns="category", values="deviation")
@@ -117,7 +117,7 @@ pivot_dev = (
     .sort_index()
 )
 
-# One heatmap: deviation only (centered at 0)
+
 generate_benchmark_heatmap(pivot_dev, "Charts/Deviation_Heatmap.png")
 
 
